@@ -653,6 +653,7 @@ __declspec(naked) void SuspendIfInactive(void)
 
   GetWindowThreadProcessId( GetForegroundWindow(), &windowInFocusProcId );
 
+//  yield CPU time when not in focus
   while ( windowInFocusProcId != gameProcId )
   {
     Sleep(500);
@@ -661,6 +662,16 @@ __declspec(naked) void SuspendIfInactive(void)
 
   *(DWORD*) addr_ShowFPS = 1;
 
+//  We lock game speed to 30 FPS to avoid anomalies like
+//  Course & Heading (CRS & HDG) Select switches
+//  not being able to rotate counter-clockwise.
+//
+//  The following snippet is identical to
+//  DxWnd's LimitFrameCount implementation
+//  (https://github.com/DxWnd/DxWnd.reloaded/blob/7235efb7388b25a5dd1192b74df3c4860435ff65/dll/dxwcore.cpp#L678),
+//  meaning VSync & any FPS limits in your
+//  DxWnd config must be disabled
+//
   if ( gameSpeedLockEnabled )
   {
     currentTime = GetTickCount();
