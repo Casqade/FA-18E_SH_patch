@@ -696,6 +696,10 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ulReason, LPVOID lpReserved)
 // Writes bytes in the current process using an ASM method
 VOID WriteBytesASM(DWORD destAddress, LPVOID patch, DWORD numBytes)
 {
+  if ( numBytes < 1 )
+    return;
+
+
   // Store old protection of the memory page
   DWORD oldProtect = 0;
 
@@ -739,29 +743,33 @@ VOID WriteBytesASM(DWORD destAddress, LPVOID patch, DWORD numBytes)
 
 //-----------------------------------------------------------------------------
 
-// Codecave function
-VOID InjectCode(DWORD destAddress, VOID(*func)(VOID), BYTE nopCount)
+VOID EraseCode(DWORD destAddress, BYTE nopCount)
 {
-  // Calculate the code cave for chat interception
-  DWORD offset = (PtrToUlong(func) - destAddress) - 5;
+  if ( nopCount < 1 )
+    return;
 
   // Buffer of NOPs, static since we limit to 'UCHAR_MAX' NOPs
   BYTE nopPatch[0xFF] = { 0 };
+
+  // Fill it with nops
+  memset(nopPatch, 0x90, nopCount);
+
+  // Make the patch now
+  WriteBytesASM(destAddress, nopPatch, nopCount);
+}
+
+// Codecave function
+VOID InjectCode(DWORD destAddress, VOID(*func)(VOID), BYTE nopCount)
+{
+  // Calculate the code cave
+  DWORD offset = (PtrToUlong(func) - destAddress) - 5;
 
   // Construct the patch to the function call
   BYTE patch[5] = { 0xE8, 0x00, 0x00, 0x00, 0x00 };
   memcpy(patch + 1, &offset, sizeof(DWORD));
   WriteBytesASM(destAddress, patch, 5);
 
-  // We are done if we do not have NOPs
-  if (nopCount == 0)
-    return;
-
-  // Fill it with nops
-  memset(nopPatch, 0x90, nopCount);
-
-  // Make the patch now
-  WriteBytesASM(destAddress + 5, nopPatch, nopCount);
+  EraseCode(destAddress + 5, nopCount);
 }
 
 //-----------------------------------------------------------------------------
