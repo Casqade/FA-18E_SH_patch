@@ -1,7 +1,4 @@
 #include <windows.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <io.h>
 #include <iostream>
 
 //-----------------------------------------------------------------------------
@@ -871,9 +868,10 @@ VOID CreateConsole()
 
   AllocConsole();
 
-  freopen("CONIN$", "r", stdin);
-  freopen("CONOUT$", "w", stderr);
-  freopen("CONOUT$", "w", stdout);
+  FILE* fDummy;
+  freopen_s(&fDummy, "CONIN$", "r", stdin);
+  freopen_s(&fDummy, "CONOUT$", "w", stderr);
+  freopen_s(&fDummy, "CONOUT$", "w", stdout);
 
   // Note that there is no CONERR$ file
   HANDLE hStdout = CreateFile("CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
