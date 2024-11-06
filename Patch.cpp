@@ -48,17 +48,28 @@ DWORD injectAddr_InhibitEADRadarAltimeterP2 = 0x530867;
 DWORD injectAddr_InhibitFLIRRadarAltimeterP1 = 0x53F147;
 DWORD injectAddr_InhibitFLIRRadarAltimeterP2 = 0x53F1C0;
 
-DWORD injectAddr_CrankLEng     = 0x4DC735;
-DWORD injectAddr_CrankREng     = 0x4DC7A5;
+DWORD injectAddr_ApuAutoShutDown1 = 0x4CFBB6;
+DWORD injectAddr_ApuAutoShutDown2 = 0x4CFF25;
 
-DWORD injectAddr_ShutdownApu      = 0x51DC68;
+DWORD injectAddr_ApuAutoSwitchDown = 0x4DA9DA;
+
+DWORD injectAddr_CrankLEng = 0x4DC72B;
+DWORD injectAddr_CrankREng = 0x4DC79B;
+
+DWORD injectAddr_LEngSwitchUp = 0x4DC70D;
+DWORD injectAddr_REngSwitchUp = 0x4DC77D;
+
+DWORD injectAddr_LEngAutoSwitchDown = 0x4DAA43;
+DWORD injectAddr_REngAutoSwitchDown = 0x4DAAAC;
+
+DWORD injectAddr_ToggleApu = 0x51DC68;
 DWORD injectAddr_ShutdownApuLamps = 0x4CFB68;
 
-DWORD injectAddr_ShutdownLEng     = 0x51DCF0;
-DWORD injectAddr_ShutdownREng     = 0x51DD51;
+DWORD injectAddr_ShutdownLEng = 0x51DCF0;
+DWORD injectAddr_ShutdownREng = 0x51DD51;
 
 DWORD injectAddr_PressRequestLandingBtn = 0x54E4A1;
-DWORD injectAddr_DrawRequestLandingBtn = 0x54F581;
+DWORD injectAddr_DrawRequestLandingBtn  = 0x54F581;
 
 
 /// Ingame variables
@@ -312,19 +323,7 @@ __declspec(naked) void InhibitRadarAltimeterP2(void)
 }
 
 
-__declspec(naked) void ForbidEnginesToStartApu(void)
-{
-  __asm
-  {
-    pop returnAddr
-
-    push returnAddr
-    ret
-  }
-}
-
-
-__declspec(naked) void ApuShutdown(void)
+__declspec(naked) void ApuToggle(void)
 {
   __asm
   {
@@ -339,6 +338,7 @@ __declspec(naked) void ApuShutdown(void)
     *(DWORD*) addr_ApuOn = 0;           //  shutdown APU
     *(DWORD*) addr_ApuSwitchDown = 1;   //  throw its switch down
     *(DWORD*) addr_ApuLampsTimeOut = 0; //  reset cockpit lights illumintation timeout
+    *(DWORD*) addr_ApuCooldownTimePoint = 0; // reset apu cooldown
 
 
     if (  *(DOUBLE*) addr_EngineLRpm < engineLRpmIdle &&
@@ -388,7 +388,7 @@ __declspec(naked) void ApuShutdownLamps(void)
 }
 
 
-__declspec(naked) void EngineLShutdown(void)
+__declspec(naked) void EngineLSwitchUp(void)
 {
   __asm
   {
@@ -398,7 +398,66 @@ __declspec(naked) void EngineLShutdown(void)
     PUSHFD
   }
 
-  if (  *(DWORD*) addr_ApuOn == 0 &&
+  if ( *(DWORD*) addr_ApuOn > 0 ||
+       *(DWORD*) addr_EngineROn > 0 &&
+       *(DWORD*) addr_EngineRRpm >= engineRRpmIdle )
+    *(DWORD*) addr_EngineLOn = 1;
+
+  __asm
+  {
+    POPFD
+    POPAD
+
+    MOV EAX, 29h
+
+    push returnAddr
+    ret
+  }
+}
+
+
+__declspec(naked) void EngineRSwitchUp(void)
+{
+  __asm
+  {
+    pop returnAddr
+
+    PUSHAD
+    PUSHFD
+  }
+
+  if ( *(DWORD*) addr_ApuOn > 0 ||
+       *(DWORD*) addr_EngineLOn > 0 &&
+       *(DWORD*) addr_EngineLRpm >= engineLRpmIdle )
+    *(DWORD*) addr_EngineROn = 1;
+
+  __asm
+  {
+    POPFD
+    POPAD
+
+    MOV EAX, 29h
+
+    push returnAddr
+    ret
+  }
+}
+
+
+__declspec(naked) void EngineLShutdown(void)
+{
+  __asm
+  {
+    pop returnAddr
+
+    PUSHAD
+    PUSHFD
+
+    CALL [func_ShutdownLEng]
+  }
+
+  if (  *(DWORD*) addr_EngineLOn < 1 &&
+        *(DWORD*) addr_ApuOn == 0 &&
         *(DWORD*) addr_EngineROn > 0 &&
         *(DOUBLE*) addr_EngineRRpm < engineRRpmIdle )
   {
@@ -410,8 +469,6 @@ __declspec(naked) void EngineLShutdown(void)
 
   __asm
   {
-    CALL [func_ShutdownLEng]
-
     POPFD
     POPAD
 
@@ -431,9 +488,12 @@ __declspec(naked) void EngineRShutdown(void)
 
     PUSHAD
     PUSHFD
+
+    CALL [func_ShutdownREng]
   }
 
-  if (  *(DWORD*) addr_ApuOn == 0 &&
+  if (  *(DWORD*) addr_EngineROn < 1 &&
+        *(DWORD*) addr_ApuOn == 0 &&
         *(DWORD*) addr_EngineLOn > 0 &&
         *(DOUBLE*) addr_EngineLRpm < engineLRpmIdle )
   {
@@ -445,8 +505,6 @@ __declspec(naked) void EngineRShutdown(void)
 
   __asm
   {
-    CALL [func_ShutdownREng]
-
     POPFD
     POPAD
 
@@ -655,10 +713,29 @@ extern "C" __declspec(dllexport) void Initialize()
   InjectCode(injectAddr_InhibitEADRadarAltimeterP1, InhibitRadarAltimeterP1, 1);
   InjectCode(injectAddr_InhibitEADRadarAltimeterP2, InhibitRadarAltimeterP2, 2);
 
-  InjectCode(injectAddr_CrankLEng, ForbidEnginesToStartApu, 1);
-  InjectCode(injectAddr_CrankREng, ForbidEnginesToStartApu, 1);
 
-  InjectCode(injectAddr_ShutdownApu,      ApuShutdown,      17);
+//  Prevent automatic APU shutdown
+  EraseCode(injectAddr_ApuAutoShutDown1, 7);
+  EraseCode(injectAddr_ApuAutoShutDown2, 28);
+
+//  Prevent APU switch to go down automatically
+  EraseCode(injectAddr_ApuAutoSwitchDown, 21);
+
+
+//  Prevent both engines from starting up APU
+  EraseCode(injectAddr_CrankLEng, 21);
+  EraseCode(injectAddr_CrankREng, 21);
+
+//  Prevent engines from starting without active APU
+  InjectCode(injectAddr_LEngSwitchUp, EngineLSwitchUp, 11);
+  InjectCode(injectAddr_REngSwitchUp, EngineRSwitchUp, 11);
+
+//  Prevent both engine switches to go down automatically
+  EraseCode(injectAddr_LEngAutoSwitchDown, 21);
+  EraseCode(injectAddr_REngAutoSwitchDown, 20);
+
+
+  InjectCode(injectAddr_ToggleApu, ApuToggle, 17);
   InjectCode(injectAddr_ShutdownApuLamps, ApuShutdownLamps, 3);
 
   InjectCode(injectAddr_ShutdownLEng, EngineLShutdown, 0);
