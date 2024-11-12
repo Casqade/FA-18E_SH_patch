@@ -23,6 +23,14 @@ Unfortunately, I don't own GOG version to check the hash,
 so if you own it, please report whether this patch works for you. 
 
 
+## Usage: 
+
+1. Copy both `F18loader.exe` and `F18patch.dll` into 
+game's root directory right next to original `F18.exe`. 
+2. Run `F18loader.exe`.
+3. If no errors occurred, the loader should automatically launch the game. 
+
+
 ## Fixes:
 - High framerate causes issues with the game,
 e.g. Course & Heading Select switches stop working properly.
