@@ -43,8 +43,8 @@ jobs:
         cmake
         -S ${{ github.workspace }}
         -B ${{ steps.strings.outputs.build-output-dir }}
+        -T host=x86 -A Win32
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DCMAKE_GENERATOR_PLATFORM=x86
         -DBUILD_SHARED_LIBS=${{ matrix.shared_libs_enabled }}
 
     - name: Build
