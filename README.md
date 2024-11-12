@@ -1,5 +1,10 @@
 # FA-18E_SH_patch
 
+[![Windows (MSVC)](https://github.com/casqade/FA-18E_SH_patch/actions/workflows/windows-build-msvc.yml/badge.svg)](https://github.com/casqade/FA-18E_SH_patch/actions/workflows/windows-build-msvc.yml)
+[![GitHub Releases](https://img.shields.io/github/release/casqade/FA-18E_SH_patch.svg)](https://github.com/casqade/FA-18E_SH_patch/releases/latest)
+
+---
+
 A fanmade patch for F/A-18E Super Hornet (2000, Digital Integration). 
 It uses a technique called DLL injection, 
 the way it works is described in
@@ -25,10 +30,11 @@ so if you own it, please report whether this patch works for you.
 
 ## Usage: 
 
-1. Copy both `F18loader.exe` and `F18patch.dll` into 
+1. Download & unpack the [latest release](https://github.com/casqade/FA-18E_SH_patch/releases/latest) of `FA-18E_SH_patch-win32.zip`
+2. Copy both `F18loader.exe` and `F18patch.dll` into 
 game's root directory right next to original `F18.exe`. 
-2. Run `F18loader.exe`.
-3. If no errors occurred, the loader should automatically launch the game. 
+3. Run `F18loader.exe`.
+4. If no errors occurred, the loader should automatically launch the game. 
 
 
 ## Fixes:
