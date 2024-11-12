@@ -20,7 +20,7 @@ set(INJECTION_TARGET_MD5 "3E9301D75C8D3B212AA18C9A88CD06BF" CACHE STRING "Inject
 set(INJECTED_PATCH_FILENAME "F18patch.dll" CACHE STRING "Injected DLL filename")
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
-option(ENABLE_CONSOLE "Create patch console window" ON)
+option(ENABLE_CONSOLE "Create patch console window" OFF)
 
 if (NOT ${BUILD_SHARED_LIBS})
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
