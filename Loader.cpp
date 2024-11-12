@@ -49,7 +49,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 
 
     // Build the full path to the exe
-    _snprintf(exeString, MAX_PATH, R"path("%s\)path" INJECTION_TARGET_FILENAME R"args(" %s)args", workingDir, cmdArgs);
+    _snprintf(exeString, MAX_PATH, R"path("%s\)path" INJECTION_TARGET_FILENAME R"args(" %s)args", workingDir, lpCmdLine);
 
     // Set the static path of where the Inject DLL is, hardcoded for a demo
     _snprintf(dllPath, MAX_PATH, INJECTED_PATCH_FILENAME);
