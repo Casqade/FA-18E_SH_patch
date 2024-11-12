@@ -1,6 +1,22 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string>
+#include <vector>
+
+#if !defined(INJECTION_TARGET_FILENAME)
+    static_assert(false, "INJECTION_TARGET_FILENAME must be defined");
+#endif
+
+#if !defined(INJECTION_TARGET_MD5)
+    static_assert(false, "INJECTION_TARGET_MD5 must be defined");
+#endif
+
+#if !defined(INJECTED_PATCH_FILENAME)
+    static_assert(false, "INJECTED_PATCH_FILENAME must be defined");
+#endif
+
+
+static bool VerifyHash( const LPCSTR filename, const LPCSTR value );
 
 
 // Inject a DLL into a process
@@ -17,7 +33,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLin
     // Strings for creating the program
     char exeString[MAX_PATH + 1] = {0};
     char workingDir[MAX_PATH + 1] = {0};
-    char cmdArgs[MAX_PATH + 1] = {0};
 
     // Holds where the DLL should be
     char dllPath[MAX_PATH + 1] = {0};
@@ -25,7 +40,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLin
     // Get the current directory
     GetCurrentDirectory(MAX_PATH, workingDir);
 
-    // TODO: parse lpCmdLine
+
+    const auto exePath =
+        std::string{workingDir} + "\\" + std::string{INJECTION_TARGET_FILENAME};
+
+    if ( VerifyHash(exePath.c_str(), INJECTION_TARGET_MD5) == false )
+        return -1;
+
 
     // Build the full path to the exe
     _snprintf(exeString, MAX_PATH, R"path("%s\)path" INJECTION_TARGET_FILENAME R"args(" %s)args", workingDir, cmdArgs);
@@ -519,4 +540,205 @@ void Inject(HANDLE hProcess, const char* dllname, const char* funcname)
 
   // Free the memory in the process that we allocated
   VirtualFreeEx(hProcess, codecaveAddress, 0, MEM_RELEASE);
+}
+
+
+bool VerifyHash( const LPCSTR filename, const LPCSTR expectedHash )
+{
+//  https://learn.microsoft.com/en-us/windows/win32/seccrypto/example-c-program--creating-an-md-5-hash-from-file-content
+
+  const size_t MD5LEN = 16;
+
+  DWORD dwStatus = 0;
+  BOOL bResult = FALSE;
+  HCRYPTPROV hProv = 0;
+  HCRYPTHASH hHash = 0;
+  HANDLE hFile = NULL;
+  DWORD fileSize = 0;
+  DWORD cbRead = 0;
+  BYTE rgbHash[MD5LEN];
+  DWORD cbHashLength = MD5LEN;
+  CHAR rgbDigits[] = "0123456789abcdef";
+
+
+  DWORD expectedHashBufferSize {};
+
+  bool stringToBinaryResult = CryptStringToBinary(
+    expectedHash, 0,
+    CRYPT_STRING_HEX,
+    NULL, &expectedHashBufferSize,
+    NULL, NULL );
+
+  if ( stringToBinaryResult == false || expectedHashBufferSize != cbHashLength )
+  {
+    const auto errorMessage =
+      std::string{"CryptStringToBinary failed: "} + std::to_string(GetLastError());
+
+    MessageBox(0, errorMessage.c_str(), "Error", MB_ICONERROR);
+
+    return false;
+  }
+
+
+  std::vector <BYTE> expectedHashBuffer (expectedHashBufferSize);
+
+  stringToBinaryResult = CryptStringToBinary(
+    expectedHash, 0,
+    CRYPT_STRING_HEX,
+    expectedHashBuffer.data(),
+    &expectedHashBufferSize,
+    NULL, NULL );
+
+  if ( stringToBinaryResult == false )
+  {
+    const auto errorMessage =
+      std::string{"CryptStringToBinary failed: "} + std::to_string(GetLastError());
+
+    MessageBox(0, errorMessage.c_str(), "Error", MB_ICONERROR);
+
+    return false;
+  }
+
+
+  hFile = CreateFile(
+    filename,
+    GENERIC_READ,
+    FILE_SHARE_READ,
+    NULL,
+    OPEN_EXISTING,
+    FILE_FLAG_SEQUENTIAL_SCAN,
+    NULL );
+
+  if ( hFile == INVALID_HANDLE_VALUE )
+  {
+    const auto errorMessage =
+      std::string{"Error opening file '"} + filename +
+      std::string{"', Error code "} + std::to_string(GetLastError());
+
+    MessageBox(0, errorMessage.c_str(), "Error", MB_ICONERROR);
+
+    return false;
+  }
+
+
+  fileSize = GetFileSize(hFile, NULL);
+
+  if ( fileSize == INVALID_FILE_SIZE )
+  {
+    const auto errorMessage =
+      std::string{"GetFileSize failed: "} + std::to_string(GetLastError());
+
+    MessageBox(0, errorMessage.c_str(), "Error", MB_ICONERROR);
+
+    return false;
+  }
+
+  std::vector <BYTE> fileBuffer(fileSize);
+
+
+//  Get handle to the crypto provider
+  if ( CryptAcquireContext(&hProv, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) == false )
+  {
+    const auto errorMessage =
+      std::string{"CryptAcquireContext failed: "} + std::to_string(GetLastError());
+
+    MessageBox(0, errorMessage.c_str(), "Error", MB_ICONERROR);
+
+    CloseHandle(hFile);
+
+    return false;
+  }
+
+
+  if (!CryptCreateHash(hProv, CALG_MD5, 0, 0, &hHash))
+  {
+    const auto errorMessage =
+      std::string{"CryptCreateHash failed: "} + std::to_string(GetLastError());
+
+    MessageBox(0, errorMessage.c_str(), "Error", MB_ICONERROR);
+
+    CloseHandle(hFile);
+    CryptReleaseContext(hProv, 0);
+
+    return false;
+  }
+
+
+  while ( (bResult = ReadFile(hFile, fileBuffer.data(), fileSize, &cbRead, NULL)) )
+  {
+    if ( cbRead == 0 )
+      break;
+
+    if (!CryptHashData(hHash, fileBuffer.data(), cbRead, 0))
+    {
+      const auto errorMessage =
+        std::string{"CryptHashData failed: "} + std::to_string(GetLastError());
+
+      MessageBox(0, errorMessage.c_str(), "Error", MB_ICONERROR);
+
+      CryptReleaseContext(hProv, 0);
+      CryptDestroyHash(hHash);
+      CloseHandle(hFile);
+
+      return false;
+    }
+  }
+
+
+  if (!bResult)
+  {
+    const auto errorMessage =
+      std::string{"Error reading file '"} + filename +
+      std::string{"', Error code "} + std::to_string(GetLastError());
+
+    MessageBox(0, errorMessage.c_str(), "Error", MB_ICONERROR);
+
+    CryptReleaseContext(hProv, 0);
+    CryptDestroyHash(hHash);
+    CloseHandle(hFile);
+
+    return false;
+  }
+
+
+  if (CryptGetHashParam(hHash, HP_HASHVAL, rgbHash, &cbHashLength, 0))
+  {
+    for ( DWORD i = 0; i < cbHashLength; i++ )
+    {
+      if ( rgbHash[i] != expectedHashBuffer[i] )
+      {
+        const auto errorMessage =
+          std::string{"Hash verification failed for '"} + filename + "': " +
+          "Expected MD5 value of " + expectedHash;
+
+        MessageBox(0, errorMessage.c_str(), "Error", MB_ICONERROR);
+
+        CryptDestroyHash(hHash);
+        CryptReleaseContext(hProv, 0);
+        CloseHandle(hFile);
+
+        return false;
+      }
+    }
+  }
+  else
+  {
+    const auto errorMessage =
+      std::string{"CryptGetHashParam failed: "} + std::to_string(GetLastError());
+
+    MessageBox(0, errorMessage.c_str(), "Error", MB_ICONERROR);
+
+    CryptDestroyHash(hHash);
+    CryptReleaseContext(hProv, 0);
+    CloseHandle(hFile);
+
+    return false;
+  }
+
+
+  CryptDestroyHash(hHash);
+  CryptReleaseContext(hProv, 0);
+  CloseHandle(hFile);
+
+  return true;
 }

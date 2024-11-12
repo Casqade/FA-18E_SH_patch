@@ -16,6 +16,7 @@ set(TARGET_LOADER F18loader)
 set(TARGET_PATCH F18patch)
 
 set(INJECTION_TARGET_FILENAME "F18.EXE" CACHE STRING "Injection target filename")
+set(INJECTION_TARGET_MD5 "3E9301D75C8D3B212AA18C9A88CD06BF" CACHE STRING "Injection target MD5 value")
 set(INJECTED_PATCH_FILENAME "F18patch.dll" CACHE STRING "Injected DLL filename")
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
@@ -36,7 +37,12 @@ add_executable(${TARGET_LOADER}
 
 target_compile_definitions(${TARGET_LOADER} PRIVATE
   INJECTION_TARGET_FILENAME="${INJECTION_TARGET_FILENAME}"
+  INJECTION_TARGET_MD5="${INJECTION_TARGET_MD5}"
   INJECTED_PATCH_FILENAME="${INJECTED_PATCH_FILENAME}"
+)
+
+target_link_libraries(${TARGET_LOADER} PRIVATE
+  Crypt32
 )
 
 set_target_properties(${TARGET_LOADER} PROPERTIES
@@ -62,4 +68,3 @@ target_link_options(${TARGET_PATCH} PRIVATE
   /NOIMPLIB
   /NOEXP
 )
-
