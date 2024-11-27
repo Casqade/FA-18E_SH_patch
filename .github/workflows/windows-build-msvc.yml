@@ -26,7 +26,9 @@ jobs:
         - {
             os: windows-latest,
             cc: "cl",
-            cxx: "cl"
+            cxx: "cl",
+            arch: "x86",
+            cmake-arch-args: "-T host=x86 -A Win32"
           }
 
     steps:
@@ -43,7 +45,7 @@ jobs:
         cmake
         -S ${{ github.workspace }}
         -B ${{ steps.strings.outputs.build-output-dir }}
-        -T host=x86 -A Win32
+        ${{ matrix.config.cmake-arch-args }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DBUILD_SHARED_LIBS=${{ matrix.shared_libs_enabled }}
 
@@ -58,7 +60,7 @@ jobs:
       if: matrix.shared_libs_enabled == 'OFF'
       uses: actions/upload-artifact@v4
       with:
-        name: windows-msvc-x86
+        name: windows-msvc-${{ matrix.config.arch }}
         path: '${{ steps.strings.outputs.build-output-dir }}\${{ matrix.build_type }}\'
         if-no-files-found: error
         compression-level: 9
