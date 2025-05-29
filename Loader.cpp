@@ -1,4 +1,6 @@
 #include <windows.h>
+#include <wincrypt.h>
+
 #include <stdio.h>
 #include <string>
 #include <vector>
