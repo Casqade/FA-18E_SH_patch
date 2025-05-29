@@ -57,6 +57,7 @@ set_target_properties(${TARGET_LOADER} PROPERTIES
 
 add_library(${TARGET_PATCH} MODULE
   Patch.cpp
+  PatchAPI.cpp
 )
 
 target_compile_definitions(${TARGET_PATCH} PRIVATE
