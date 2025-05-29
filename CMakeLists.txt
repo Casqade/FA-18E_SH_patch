@@ -10,8 +10,6 @@ if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   message(FATAL_ERROR "Only MSVC compiler is supported")
 endif()
 
-set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-
 set(TARGET_LOADER F18loader)
 set(TARGET_PATCH F18patch)
 
