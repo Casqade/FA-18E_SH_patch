@@ -1,5 +1,8 @@
 #include "PatchAPI.hpp"
 
+// hidden by WIN32_LEAN_AND_MEAN
+typedef double DOUBLE;
+
 
 DWORD returnAddr = 0;
 
