@@ -32,7 +32,7 @@ endif()
 ############
 
 add_executable(${TARGET_LOADER}
-  Loader.cpp
+  src/Loader.cpp
 )
 
 target_compile_definitions(${TARGET_LOADER} PRIVATE
@@ -56,8 +56,8 @@ set_target_properties(${TARGET_LOADER} PROPERTIES
 ###########
 
 add_library(${TARGET_PATCH} MODULE
-  Patch.cpp
-  PatchAPI.cpp
+  src/Patch.cpp
+  src/PatchAPI.cpp
 )
 
 target_compile_definitions(${TARGET_PATCH} PRIVATE
