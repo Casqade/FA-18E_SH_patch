@@ -9,9 +9,11 @@ A fanmade patch for F/A-18E Super Hornet (2000, Digital Integration).
 It uses a technique called DLL injection, 
 the way it works is described in
 [Beginners Guide to Codecaves](https://web.archive.org/web/20240910225721/codeproject.com/Articles/20240/The-Beginners-Guide-to-Codecaves),
-and most of the project's code is taken from there as well. 
+and the injection routine itself is taken from there as well. 
 I only added CMake support, executable hash verification 
 and the code for the patch itself. 
+The current codebase version is based on my 
+[dll injection template](https://github.com/Casqade/dll-injection-template).
 
 This project was my first experience in reverse engineering back in 2020. 
 Annoyed by several inconsistencies between the game and its manual, I
@@ -25,7 +27,7 @@ It's valid for both [Steam version](https://store.steampowered.com/app/776050/FA
 and retail version with Albanian Campaign DLC installed and NoCD applied 
 (Fun fact: Steam version is distributed with NoCD, I bet the same goes for GOG version). 
 Unfortunately, I don't own GOG version to check the hash, 
-so if you own it, please report whether this patch works for you. 
+so if you happen to have it, please report whether this patch works for you. 
 
 
 ## Usage: 
